@@ -1,0 +1,38 @@
+/* Стили для задач */
+.task-item {
+    padding: 10px;
+    margin-bottom: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.task-item:hover {
+    background-color: #f5f5f5;
+}
+
+/* Активные задачи */
+.active-task {
+    border-left: 4px solid #ffc107;
+}
+
+/* Выполненные задачи */
+.completed-task {
+    border-left: 4px solid #28a745;
+    opacity: 0.8;
+}
+
+/* Анимация загрузки */
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #999;
+}
+
+/* Сообщения об ошибках */
+.error-message {
+    color: #dc3545;
+    font-size: 0.9em;
+    margin-top: 5px;
+}
