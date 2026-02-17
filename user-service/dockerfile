@@ -1,52 +1,27 @@
-# user-service/Dockerfile
-
-# 1. Базовый образ с Java
-FROM openjdk:21-jdk-slim AS build
-
-# 2. Метаданные
-LABEL maintainer="your-email@example.com"
-LABEL version="1.0"
-LABEL description="User Service for Todo Microservices"
-
-# 3. Рабочая папка
+FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 
-# 4. Копируем Maven файлы (для кэширования зависимостей)
+# Копируем Maven wrapper и родительский POM
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
-COPY common/pom.xml common/
-COPY user-service/pom.xml user-service/
+RUN chmod +x mvnw
 
-# 5. Скачиваем зависимости (кэшируется, если pom.xml не менялся)
-RUN ./mvnw dependency:go-offline -B
+# Устанавливаем родительский POM
+RUN ./mvnw clean install -N -DskipTests
 
-# 6. Копируем исходники
+# Устанавливаем common
 COPY common common
+RUN ./mvnw -f common/pom.xml clean install -DskipTests
+
+# Собираем user-service
 COPY user-service user-service
+RUN ./mvnw -f user-service/pom.xml clean package -DskipTests
 
-# 7. Собираем приложение
-RUN ./mvnw clean package -pl user-service -am -DskipTests
+# Ищем JAR для user-service
+RUN cp /app/user-service/target/user-service-*.jar /app/app.jar
 
-# 8. Второй этап - минимальный образ для запуска
-FROM openjdk:21-jdk-slim
-
-# 9. Создаем непривилегированного пользователя
-RUN addgroup --system --gid 1001 appuser && \
-    adduser --system --uid 1001 --gid 1001 appuser
-
-# 10. Копируем собранный jar из первого этапа
-COPY --from=build --chown=appuser:appuser /app/user-service/target/*.jar /app/app.jar
-
-# 11. Переключаемся на непривилегированного пользователя
-USER appuser
-
-# 12. Открываем порт
+FROM eclipse-temurin:21-jre-alpine
+COPY --from=build /app/user-service/target/*.jar /app.jar
 EXPOSE 8081
-
-# 13. Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:8081/actuator/health || exit 1
-
-# 14. Запускаем приложение
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "/app.jar"]

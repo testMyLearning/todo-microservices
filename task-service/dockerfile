@@ -1,40 +1,27 @@
-# task-service/Dockerfile
-FROM openjdk:21-jdk-slim AS build
-
-LABEL maintainer="your-email@example.com"
-LABEL version="1.0"
-LABEL description="Task Service for Todo Microservices"
-
+FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 
-# Кэширование зависимостей
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
-COPY common/pom.xml common/
-COPY task-service/pom.xml task-service/
+RUN chmod +x mvnw
 
-RUN ./mvnw dependency:go-offline -B
+# Устанавливаем родительский POM
+RUN ./mvnw clean install -N -DskipTests
 
-# Копируем исходники
+# Устанавливаем common
 COPY common common
+RUN ./mvnw -f common/pom.xml clean install -DskipTests
+
+# Собираем task-service
 COPY task-service task-service
+RUN ./mvnw -f task-service/pom.xml clean package -DskipTests
 
-# Сборка
-RUN ./mvnw clean package -pl task-service -am -DskipTests
 
-# Финальный образ
-FROM openjdk:21-jdk-slim
+# Ищем JAR для task-service
+RUN cp /app/task-service/target/task-service-*.jar /app/app.jar
 
-RUN addgroup --system --gid 1001 appuser && \
-    adduser --system --uid 1001 --gid 1001 appuser
-
-COPY --from=build --chown=appuser:appuser /app/task-service/target/*.jar /app/app.jar
-
-USER appuser
+FROM eclipse-temurin:21-jre-alpine
+COPY --from=build /app/task-service/target/*.jar /app.jar
 EXPOSE 8082
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:8082/actuator/health || exit 1
-
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "/app.jar"]

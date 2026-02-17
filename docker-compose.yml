@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   # Базы данных
@@ -12,6 +11,17 @@ services:
       - "5433:5432"
     volumes:
       - user-data:/var/lib/postgresql/data
+    networks:
+      - microservices-net
+    deploy:
+        replicas: 1  # База данных обычно одна (репликация БД - сложная тема)
+        restart_policy:
+          condition: on-failure  # Перезапустить, если упадет
+          delay: 5s              # Подождать 5 секунд перед перезапуском
+          max_attempts: 3        # Не больше 3 попыток
+        placement:
+          constraints: # Ограничения на размещение
+            - node.role == manager  # Запускать только на менеджере (где у нас данные)
 
   postgres-task:
     image: postgres:17
@@ -23,10 +33,22 @@ services:
       - "5434:5432"
     volumes:
       - task-data:/var/lib/postgresql/data
+    networks:
+        - microservices-net
+    deploy:
+        replicas: 1
+        restart_policy:
+          condition: on-failure
+        placement:
+          constraints:
+            - node.role == manager
 
   # Микросервисы
   user-service:
-    build: ./user-service
+    build:
+      context: .
+      dockerfile : user-service/dockerfile
+    image: user-service:latest  # тег для образа
     ports:
       - "8081:8081"
     depends_on:
@@ -35,21 +57,66 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/user_db
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - microservices-net
+    deploy:
+      replicas: 2  # Запустим 2 экземпляра для надежности
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+      update_config: # Настройки обновления
+        parallelism: 1      # Обновлять по одному контейнеру
+        delay: 10s         # Пауза между обновлениями
+        order: start-first  # Сначала запустить новый, потом остановить старый
+      resources: # Ограничение ресурсов (ОЧЕНЬ ВАЖНО!)
+        limits:
+          cpus: '0.5'      # Не больше 50% CPU
+          memory: 512M     # Не больше 512MB RAM
+        reservations:
+          cpus: '0.25'     # Минимум 25% CPU
+          memory: 256M     # Минимум 256MB RAM
+
 
   task-service:
-    build: ./task-service
+    build:
+      context: .  # корень проекта
+      dockerfile: task-service/dockerfile
+    image: task-service:latest
     ports:
       - "8082:8082"
     depends_on:
       - postgres-task
+      - user-service
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-task:5432/task_db
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       USER_SERVICE_URL: http://user-service:8081
+    networks:
+      - microservices-net
+
+    deploy:
+        replicas: 2
+        restart_policy:
+          condition: on-failure
+        update_config:
+          parallelism: 1
+          delay: 10s
+          order: start-first
+        resources:
+          limits:
+            cpus: '0.5'
+            memory: 512M
+          reservations:
+            cpus: '0.25'
+            memory: 256M
 
   api-gateway:
-    build: ./api-gateway
+    build:
+      context: .  # корень проекта
+      dockerfile: api-gateway/dockerfile
+    image: api-gateway:latest
     ports:
       - "8080:8080"
     depends_on:
@@ -58,15 +125,52 @@ services:
     environment:
       USER_SERVICE_URL: http://user-service:8081
       TASK_SERVICE_URL: http://task-service:8082
+    networks:
+      - microservices-net
+    deploy:
+        replicas: 2  # Gateway тоже можно масштабировать
+        restart_policy:
+          condition: on-failure
+        update_config:
+          parallelism: 1
+          delay: 10s
+          order: start-first
+        resources:
+          limits:
+            cpus: '0.5'
+            memory: 512M
+          reservations:
+            cpus: '0.25'
+            memory: 256M
 
   # Фронтенд
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    image: frontend:latest
     ports:
       - "3000:80"
+    networks:
+      - microservices-net
     depends_on:
-      - api-gateway
+        - api-gateway
+    deploy:
+        replicas: 1  # Фронтенд пока без реплик
+        restart_policy:
+          condition: on-failure
+        resources:
+          limits:
+            cpus: '0.2'
+            memory: 128M
+          reservations:
+            cpus: '0.1'
+            memory: 64M
 
 volumes:
   user-data:
   task-data:
+
+networks:
+  microservices-net:
+    driver: overlay  # overlay сеть работает на всех нодах кластера
