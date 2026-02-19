@@ -1,6 +1,7 @@
 package com.todo.user.config;
 
 import com.todo.common.security.SecretService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +13,7 @@ import javax.sql.DataSource;
 public class DatabaseConfig {
     @Bean
     @Primary
+    @ConditionalOnMissingBean(DataSource.class)
     public DataSource dataSource(){
         return DataSourceBuilder.create()
                 .url("jdbc:postgresql://postgres-user:5432/user_db")

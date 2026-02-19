@@ -1,6 +1,6 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
-ARG VERSION=1.0.0
+ARG VERSION
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
@@ -19,6 +19,7 @@ RUN ./mvnw -f task-service/pom.xml clean package -DskipTests
 
 
 FROM eclipse-temurin:21-jre-alpine
+ARG VERSION
 COPY --from=build /app/task-service/target/task-service-${VERSION}.jar /app.jar
 EXPOSE 8082
 ENTRYPOINT ["java", "-jar", "/app.jar"]
