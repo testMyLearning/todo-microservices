@@ -12,6 +12,10 @@ spring:
       ui:
         title: Todo Microservices Admin
         brand: <img src="assets/img/icon-spring-boot-admin.svg"><span>Todo Admin</span>
+      monitor:
+        default-timeout: 30s
+        status-interval: 35s
+
 
 eureka:
   client:
@@ -20,8 +24,9 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
   instance:
-    hostname: ${HOSTNAME:admin-server}
-    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
+    hostname: ${spring.application.name}
+    prefer-ip-address: false
     lease-renewal-interval-in-seconds: 30
     lease-expiration-duration-in-seconds: 90
 
