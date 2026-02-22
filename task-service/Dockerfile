@@ -21,5 +21,6 @@ RUN ./mvnw -f task-service/pom.xml clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 ARG VERSION
 COPY --from=build /app/task-service/target/task-service-${VERSION}.jar /app.jar
+COPY common-config /common-config/
 EXPOSE 8082
 ENTRYPOINT ["java", "-jar", "/app.jar"]

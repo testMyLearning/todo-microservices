@@ -4,9 +4,11 @@ server:
 spring:
   application:
     name: user-service
-  profiles:
-    include:
-      - actuator
+  config:
+    import:
+      - optional:file:/common-config/application-devtools.yml
+      - optional:file:/common-config/application-actuator.yaml
+
 
 
   jpa:

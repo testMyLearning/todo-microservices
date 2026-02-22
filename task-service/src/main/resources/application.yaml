@@ -4,9 +4,11 @@ server:
 spring:
   application:
     name: task-service
-  profiles:
-    include:
-      - actuator
+  config:
+    import:
+      - optional:file:/common-config/application-devtools.yml
+      - optional:file:/common-config/application-actuator.yaml
+
 
 
   jpa:
@@ -18,8 +20,7 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
-user-service:
-  url: http://user-service:8081
+
 eureka:
   client:
     service-url:

@@ -91,6 +91,8 @@ services:
     depends_on:
       - postgres-user
       - eureka-server
+    volumes:
+      - ./user-service/src:/app/user-service/src
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-user:5432/user_db
@@ -118,6 +120,8 @@ services:
     depends_on:
       - postgres-task
       - eureka-server
+    volumes:
+      - ./task-service/src:/app/task-service/src
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-task:5432/task_db
@@ -145,6 +149,8 @@ services:
       - user-service
       - task-service
       - eureka-server
+    volumes:
+      - ./api-gateway/src:/app/api-gateway/src
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       USER_SERVICE_URL: http://user-service:8081

@@ -22,6 +22,7 @@ RUN ./mvnw -f api-gateway/pom.xml clean package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 ARG VERSION
+COPY common-config /common-config/
 COPY --from=build /app/api-gateway/target/api-gateway-${VERSION}.jar /app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app.jar"]

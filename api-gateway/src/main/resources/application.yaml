@@ -4,9 +4,13 @@ server:
 spring:
   application:
     name: api-gateway
-  profiles:
-    include:
-      - actuator
+  config:
+    import:
+    - optional:file:/common-config/application-actuator.yaml
+    - optional:file:/common-config/application-devtools.yml
+
+
+
   main:
     web-application-type: reactive
   cloud:

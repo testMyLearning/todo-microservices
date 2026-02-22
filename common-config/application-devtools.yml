@@ -1,0 +1,12 @@
+spring:
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: .
+    livereload:
+      enabled: true
+
+logging:
+  level:
+    com.todo: DEBUG
+    org.springframework.cloud.gateway: DEBUG
